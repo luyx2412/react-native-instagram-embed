@@ -68,14 +68,8 @@ export default class InstagramEmbed extends PureComponent {
         let commentsRegex = /span\s+class\=\"espMetricTextCollapsible\"><\/span>([0-9\,\.km]+)<span\s+class\=\"espMetricTextCollapsible\">\s+comments?/g;
         let commentsMatch = commentsRegex.exec(responseText);
 
-        let thumbnailRegex = /class\=\"EmbeddedMediaImage\"/g;
+        let thumbnailRegex = /class\=\"efImage\"\s+src=\"([a-zA-Z0-9\-\\\:\/\.\_]+)\"/g;
         let thumbnailMatch = thumbnailRegex.exec(responseText);
-        console.log(thumbnailMatch);
-        const results = [];
-        while (thumbnailRegex.exec(responseText)) {
-          results.push(thumbnailRegex.lastIndex);
-        }
-        console.log(results);
 
         this.setState({
           thumbnail: thumbnailMatch ? thumbnailMatch[1] : null,
