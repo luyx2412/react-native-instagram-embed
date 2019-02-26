@@ -1,6 +1,8 @@
 /**
  * Instagram Embed component for React Native
  * https://github.com/GaborWnuk
+ *
+ * @format
  * @flow
  */
 
@@ -41,16 +43,21 @@ export default class InstagramEmbed extends PureComponent {
     let match = regex.exec(url);
 
     const id = match[1];
+    console.log(id, match);
 
     if (!id) {
       return;
     }
 
     fetch(`https://www.instagram.com/p/${id}/embed/captioned/`)
-      .then(response => response.text())
+      .then(response => {
+        console.log('response', response);
+        return response.text();
+      })
       .then(responseText => {
-        let avatarRegex = /class\=\"ehAvatar\"\s+src=\"([a-zA-Z0-9\-\\\:\/\.\_]+)\"/g;
+        let avatarRegex = /alt\=\"lilpump\"\s+src=\"([a-zA-Z0-9\-\\\:\/\.\_]+)\"/g;
         let avatarMatch = avatarRegex.exec(responseText);
+        console.log(avatarMatch);
 
         let likesRegex = /span\s+class\=\"espMetricTextCollapsible\"><\/span>([0-9\,\.km]+)<span\s+class\=\"espMetricTextCollapsible\">\s+likes?/g;
         let likesMatch = likesRegex.exec(responseText);
@@ -61,8 +68,14 @@ export default class InstagramEmbed extends PureComponent {
         let commentsRegex = /span\s+class\=\"espMetricTextCollapsible\"><\/span>([0-9\,\.km]+)<span\s+class\=\"espMetricTextCollapsible\">\s+comments?/g;
         let commentsMatch = commentsRegex.exec(responseText);
 
-        let thumbnailRegex = /class\=\"efImage\"\s+src=\"([a-zA-Z0-9\-\\\:\/\.\_]+)\"/g;
+        let thumbnailRegex = /class\=\"EmbeddedMediaImage\"/g;
         let thumbnailMatch = thumbnailRegex.exec(responseText);
+        console.log(thumbnailMatch);
+        const results = [];
+        while (thumbnailRegex.exec(responseText)) {
+          results.push(thumbnailRegex.lastIndex);
+        }
+        console.log(results);
 
         this.setState({
           thumbnail: thumbnailMatch ? thumbnailMatch[1] : null,
@@ -81,11 +94,32 @@ export default class InstagramEmbed extends PureComponent {
       .then(response => response.json())
       .then(responseJson => {
         this._fetchComplementaryData(url);
+        console.log('responseJson', responseJson);
+        if (responseJson) {
+          fetch(responseJson.thumbnail_url).then(resp => {
+            if (!resp.ok) {
+              this._fetchPhoto(url);
+            }
+          });
+        }
+
         this.setState({ response: responseJson });
       })
       .catch(error => {
         this.setState({ response: null });
       });
+  };
+
+  _fetchPhoto = url => {
+    let regex = /\/p\/([a-zA-Z0-9]+)/g;
+    let match = regex.exec(url);
+    const id = match[1];
+
+    fetch(`https://instagram.com/p/${id}/media/?size=l`).then(resp => {
+      if (resp.ok) {
+        this.setState({ thumbnail_url: resp.url });
+      }
+    });
   };
 
   render(): JSX.JSXElement {
@@ -98,6 +132,7 @@ export default class InstagramEmbed extends PureComponent {
       likes,
       comments,
       thumbnail,
+      thumbnail_url,
       views,
     } = this.state;
 
@@ -132,7 +167,18 @@ export default class InstagramEmbed extends PureComponent {
               source={{ uri: thumbnail }}
               style={{
                 height:
-                  response.thumbnail_height * width / response.thumbnail_width,
+                  (response.thumbnail_height * width) /
+                  response.thumbnail_width,
+              }}
+            />
+          )}
+          {!!thumbnail_url && (
+            <Image
+              source={{ uri: thumbnail_url }}
+              style={{
+                height:
+                  (response.thumbnail_height * width) /
+                  response.thumbnail_width,
               }}
             />
           )}
